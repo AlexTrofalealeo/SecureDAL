@@ -29,7 +29,7 @@ for backend in "${BACKENDS[@]}"; do
 
             pytest benchmarks/test_bench_${workload}.py \
                 --benchmark-json="${RESULTS_DIR}/results_${backend}_${workload}_run${run}.json" \
-                --benchmark-histogram="${HISTOGRAM_DIR}/histogram_${backend}_${workload}_run${run}.svg" \
+                --benchmark-histogram="${HISTOGRAM_DIR}/histogram_${backend}_${workload}_run${run}" \
                 --backend="$backend" \
                 --n-rounds="$N_ROUNDS" \
                 --no-header \

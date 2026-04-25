@@ -1,19 +1,23 @@
+import json
+from pathlib import PurePosixPath
+
 import opendal
-import hashlib
+from hashlib import sha256
 from typing import Any
 from .eis_layer import EISLayer
 from .exceptions import BulkTamperException, TamperDetectedException, MissingAnchorException, DataNotFoundException, TamperException
 
 _IDENTITY_KEYS = {
-    "bucket", "container", "filesystem", "share_name",
-    "endpoint", "root", "region", "db",
-    "database", "collection", "table", "repo_id",
-    "key_field", "value_field",
-    "space", "repository", "branch",         # nebula, lakefs
-    "datadir", "datafile",                   # local/embedded DBs
-    "namespace",                             # surrealdb
-    "owner", "repo",                         # github
-    "drive_type",                            # aliyun_drive
+    "bucket": "str", "container": "str", "filesystem": "str", "share_name": "str",
+    "endpoint": "sre", "region": "str", "db": "int",
+    "database": "str", "collection": "str", "table": "str", "repo_id": "str",
+    #"key_field": "str", "value_field": "str",
+    "space": "str", "repository": "str", "branch": "str",         # nebula, lakefs
+    "datadir": "path", "datafile": "path",                   # local/embedded DBs
+    "namespace": "str",                             # surrealdb
+    "owner": "str", "repo": "str",                         # github
+    "drive_type": "str",                            # aliyun_drive
+    "root": "path", "atomic_write_dir": "path",
 }
 
 class TamperOperator:
@@ -30,22 +34,61 @@ class TamperOperator:
         ) -> None:
 
         self.operator = opendal.Operator(scheme, **kwargs)
+        self.operator_context = self._build_operator_context(scheme, **kwargs)
+
         self.ledger = EISLayer(
             address=ledger,
             mapping_path=mapping_path,
             pinata_token=pinata_token,
+            backend_context=self.operator_context,
         )
 
-        operator_details = {"scheme": scheme}
-        operator_details.update({k: v for k, v in kwargs.items() if k in _IDENTITY_KEYS})
-        self.operator_context = "&".join(f"{k}={v}" for k, v in sorted(operator_details.items()))
+    @classmethod
+    def _build_operator_context(cls, scheme: str, **kwargs: Any) -> str:
+
+        def _normalize(v):
+            if isinstance(v, bool):
+                return str(v).lower()
+            if isinstance(v, (int, float)):
+                return str(v)
+            return str(v).strip()
+        
+        paths = {
+            k: cls._normalize_path(kwargs[k]) 
+            for k, t in _IDENTITY_KEYS.items() 
+            if t == "path" and k in kwargs and kwargs[k]
+        }
+        base_path = "/".join(paths.values())
+
+        canonical = json.dumps(
+            {
+                k: _normalize(kwargs[k])
+                for k, t in sorted(_IDENTITY_KEYS.items())
+                if t != "path" and k in kwargs and kwargs[k]
+            },
+            separators=(",", ":"),
+        )
+        digest = sha256(canonical.encode()).hexdigest()[:16]
+        context_id = f"{scheme}:{digest}:{base_path}/" if base_path else f"{scheme}:{digest}:"
+
+        return {
+            "id": context_id,
+            "raw": canonical, 
+            "path": base_path, 
+        }
 
     @staticmethod
-    def _normalize_key(key: str) -> str:
-        return key.lstrip("/")
+    def _normalize_path(path: str) -> str:
+        if path is None:
+            return ""
+        p = str(path).strip()
+        p = p.replace("\\", "/")        
+        p = str(PurePosixPath(p))        
+        p = p.lstrip("/")
+        return "" if p=="." else p
 
     def write(self, key: str, data: bytes, **options: Any) -> None:
-        key = self._normalize_key(key)
+        key = self._normalize_path(key)
         if options.get("append", False) and self.operator.capability().write_can_append:
             try:
                 existing_data = self.read(key)
@@ -58,12 +101,11 @@ class TamperOperator:
 
         self.operator.write(key, data, **options)
 
-        metadata = self.operator.stat(key)
-        hash_value = compute_hash(key, full_data, metadata, self.operator_context)
+        hash_value = self._compute_hash(key, full_data)
         self.ledger.store_hash(key, hash_value)
 
     def read(self, key: str, **options: Any) -> bytes:
-        key = self._normalize_key(key)
+        key = self._normalize_path(key)
         expected_hash = self.ledger.get_hash(key)
         
         try:
@@ -76,34 +118,31 @@ class TamperOperator:
         if expected_hash is None:
             raise MissingAnchorException(key)
         
-        metadata = self.operator.stat(key)
-        current_hash = compute_hash(key, data, metadata, self.operator_context)
+        current_hash = self._compute_hash(key, data)
         if expected_hash != current_hash:
             raise TamperDetectedException(key)
 
         return data
     
     def delete(self, key: str) -> None:
-        key = self._normalize_key(key)
+        key = self._normalize_path(key)
         self.operator.delete(key)
         self.ledger.delete(key)
 
     def copy(self, source: str, dest: str) -> None:
-        source = self._normalize_key(source)
-        dest = self._normalize_key(dest)
+        source = self._normalize_path(source)
+        dest = self._normalize_path(dest)
         data = self.read(source)
         self.operator.copy(source, dest)
-        metadata = self.operator.stat(dest)
-        hash_value = compute_hash(dest, data, metadata, self.operator_context)
+        hash_value = self._compute_hash(dest, data)
         self.ledger.store_hash(dest, hash_value)
 
     def rename(self, source: str, dest: str) -> None:
-        source = self._normalize_key(source)
-        dest = self._normalize_key(dest)
+        source = self._normalize_path(source)
+        dest = self._normalize_path(dest)
         data = self.read(source)
         self.operator.rename(source, dest)
-        metadata = self.operator.stat(dest)
-        hash_value = compute_hash(dest, data, metadata, self.operator_context)
+        hash_value = self._compute_hash(dest, data)
         self.ledger.store_hash(dest, hash_value)
         self.ledger.delete(source)
 
@@ -140,6 +179,22 @@ class TamperOperator:
         raise NotImplementedError(
             "TamperOperator does not support 'open()'. Use read/write instead."
         )
+    
+    def _compute_hash(self, key: str, data: bytes) -> bytes:
+        metadata = self.operator.stat(key)
+        meta_parts = []
+        if metadata.content_length is not None:
+            meta_parts.append(f"content_length={metadata.content_length}")
+        if metadata.last_modified is not None:
+            meta_parts.append(f"last_modified={metadata.last_modified.isoformat()}")
+        if metadata.etag is not None:
+            meta_parts.append(f"etag={metadata.etag}")
+        if metadata.version is not None:
+            meta_parts.append(f"version={metadata.version}")
+        meta_str = "&".join(meta_parts)
+
+        payload = (self.operator_context["id"] + key).encode() + data + meta_str.encode()
+        return sha256(payload).digest()
 
     def __getattr__(self, name):
         return getattr(self.operator, name)
@@ -159,18 +214,3 @@ class TamperOperator:
         except Exception:
             pass
     
-
-def compute_hash(key: str, data: bytes, metadata: opendal.Metadata, operator_context: str) -> bytes:
-    meta_parts = []
-    if metadata.content_length is not None:
-        meta_parts.append(f"content_length={metadata.content_length}")
-    if metadata.last_modified is not None:
-        meta_parts.append(f"last_modified={metadata.last_modified.isoformat()}")
-    if metadata.etag is not None:
-        meta_parts.append(f"etag={metadata.etag}")
-    if metadata.version is not None:
-        meta_parts.append(f"version={metadata.version}")
-    meta_str = "&".join(meta_parts)
-
-    payload = operator_context.encode() + key.encode() + data + meta_str.encode()
-    return hashlib.sha256(payload).digest()

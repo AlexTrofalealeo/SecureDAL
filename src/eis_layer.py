@@ -2,6 +2,7 @@ import ipfshttpclient
 import requests
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 PINATA_API = "https://api.pinata.cloud"
 
@@ -12,6 +13,7 @@ class EISLayer:
         address: str = "/ip4/127.0.0.1/tcp/5001", 
         mapping_path: str = "./storage/mapping/tamper_mapping.db",
         pinata_token: str = None,
+        backend_context: dict[str, Any] = None,
     ) -> None:
         self.db = sqlite3.connect(mapping_path, check_same_thread=False) # key->CID mapping
         self._init_db()
@@ -22,6 +24,7 @@ class EISLayer:
         self._executor = ThreadPoolExecutor(max_workers=8) if pinata_token else None
 
         self.pinata_token = pinata_token
+        self.backend_context = backend_context
 
     def _init_db(self) -> None:
         self.db.execute("""
@@ -35,13 +38,13 @@ class EISLayer:
     def _persist_mapping(self, key: str, cid: str) -> None:
         self.db.execute(
             "INSERT OR REPLACE INTO mapping (key, cid) VALUES (?, ?)",
-            (key, cid)
+            (self.backend_context["id"] + key, cid)
         )
         self.db.commit()
 
     def _get_cid_from_mapping(self, key: str) -> str | None:
         row = self.db.execute(
-            "SELECT cid FROM mapping WHERE key = ?", (key,)
+            "SELECT cid FROM mapping WHERE key = ?", (self.backend_context["id"] + key,)
         ).fetchone()
 
         if row:
@@ -49,11 +52,11 @@ class EISLayer:
         
     def _delete_key_from_mapping(self, key: str) -> str | None:
         row = self.db.execute(
-            "SELECT cid FROM mapping WHERE key = ?", (key,)
+            "SELECT cid FROM mapping WHERE key = ?", (self.backend_context["id"] + key,)
         ).fetchone()
 
         if row:
-            self.db.execute("DELETE FROM mapping WHERE key = ?", (key,))
+            self.db.execute("DELETE FROM mapping WHERE key = ?", (self.backend_context["id"] + key,))
             self.db.commit()
             return row[0]
 

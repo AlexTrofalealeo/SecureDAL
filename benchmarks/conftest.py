@@ -90,12 +90,17 @@ def pytest_addoption(parser):
         help="Number of benchmark rounds per test",
     )
 
-# -- Fixtures -----------------------------------------------
-
 @pytest.fixture(scope="session")
 def backend(request):
     name = request.config.getoption("--backend")
     return BACKENDS[name]
+
+@pytest.fixture(scope="session")
+def n_rounds(request):
+    return request.config.getoption("--n-rounds")
+
+
+# -- Fixtures -----------------------------------------------
 
 @pytest.fixture(scope="module")
 def baseline_op(backend):
@@ -110,10 +115,6 @@ def tamper_op_local(backend):
         mapping_path=MAPPING_PATH,
         **backend["sdk"]
     )
-
-@pytest.fixture(scope="session")
-def n_rounds(request):
-    return request.config.getoption("--n-rounds")
 
 
 # -- Content pools --------------------------------------------
