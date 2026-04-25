@@ -1,4 +1,4 @@
-from src.tamper_operator import TamperOperator
+from securedal import TamperOperator
 
 # Initialize the operator for Redis
 op = TamperOperator(

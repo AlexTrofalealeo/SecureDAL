@@ -1,4 +1,4 @@
-from src.tamper_operator import TamperOperator
+from securedal import TamperOperator
 from opendal.exceptions import NotFound
 import os
 from dotenv import load_dotenv

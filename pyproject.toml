@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "securedal"
+version = "0.1.0"
+description = "Tamper-evident data storage SDK built on top of OpenDAL and using IPFS for hash anchoring"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "opendal",
+    "ipfshttpclient",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-benchmark",
+    "python-dotenv",
+    "numpy",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -3,7 +3,7 @@ import os
 import pytest
 import random
 import opendal
-from src.tamper_operator import TamperOperator
+from securedal import TamperOperator
 
 # -- Global config  --
 
