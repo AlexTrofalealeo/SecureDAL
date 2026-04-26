@@ -11,13 +11,20 @@ OpenDAL treats relational DBs as KV stores. So we write/read value to/from a key
 """
 print("Support for writes with if_match: ", op.capability().write_with_if_match)
 
+# UNSUPPORTED
+""" for key in op.list("/"):
+    print(key) """
+
+# UNSUPPORTED
+""" op.remove_all("/") """
+
 # Write data
-op.write("test.txt", b"Hello World")
+op.write("test_pg1.txt", b"Hello World")
 
 # Read data
-content = op.read("test.txt")
+content = op.read("test_pg1.txt")
 print(content.decode())
 
 # Get metadata
-metadata = op.stat("test.txt")
+metadata = op.stat("test_pg1.txt")
 print(f"Content length: {metadata}")

@@ -33,7 +33,8 @@ for backend in "${BACKENDS[@]}"; do
                 --backend="$backend" \
                 --n-rounds="$N_ROUNDS" \
                 --no-header \
-                -q
+                -q \
+                -s
 
             echo "  Done: $backend/$workload (run $run)"
         done

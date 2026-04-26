@@ -8,16 +8,21 @@ op = TamperOperator(
 )
 print("Support for writes with append: ", op.capability().write_can_append)
 
+# UNSUPPORTED
 """ for key in op.list("/"):
     print(key) """
 
+# UNSUPPORTED
+""" op.remove_all("/") """
+
+
 # Write data to a key
-op.write("test_redis_1.txt", b"Hello World!")
+op.write("test_redis_4.txt", b"0"*16_777_216)
 
 # Read data from the key
-content = op.read("test_redis_1.txt")
-print(content.decode())
+content = op.read("test_redis_4.txt")
+print(content.decode()[:16])
 
 # Get metadata
-metadata = op.stat("test_redis_1.txt")
+metadata = op.stat("test_redis_4.txt")
 print(f"Content length: {metadata}")

@@ -20,6 +20,8 @@ dev = [
     "pytest-benchmark",
     "python-dotenv",
     "numpy",
+    "redis",
+    "psycopg2-binary",
 ]
 
 [tool.setuptools.packages.find]

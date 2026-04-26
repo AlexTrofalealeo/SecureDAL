@@ -7,7 +7,7 @@ from securedal import TamperOperator
 
 # -- Global config  --
 
-random.seed(42)
+RNG_SEED = 42
 
 TEST_CASE = [
     ("4kb",   4_096),
@@ -136,6 +136,20 @@ def data_pool():
 
 # -- Cleaners -----------------------------------------------
 
+def _clean_redis():
+    import redis
+    r = redis.Redis.from_url(BACKENDS["redis"]["baseline"]["endpoint"])
+    r.flushall(asynchronous=False)
+
+def _clean_postgresql():
+    import psycopg2
+    conn = psycopg2.connect(BACKENDS["postgresql"]["baseline"]["connection_string"])
+    cur = conn.cursor()
+    cur.execute(f"TRUNCATE TABLE {BACKENDS['postgresql']['baseline']['table']};")
+    cur.execute(f"TRUNCATE TABLE {BACKENDS['postgresql']['sdk']['table']};")
+    conn.commit()
+    conn.close()
+
 def _clean_sqlite():
     import sqlite3
     if os.path.exists(MAPPING_PATH):
@@ -144,9 +158,26 @@ def _clean_sqlite():
         conn.commit()
         conn.close()
 
-@pytest.fixture(scope="module")
-def clean(baseline_op, tamper_op_local):
-    baseline_op.remove_all("/")
-    tamper_op_local.operator.remove_all("/")
+def _clean(backend, baseline_op, tamper_op_local):
+    print("\n  --- CLEANING BACKEND... ---")
+
+    if backend["scheme"] == "redis":
+        _clean_redis()
+    elif backend["scheme"] == "postgresql":
+        _clean_postgresql()
+    else:
+        baseline_op.remove_all("/")
+        tamper_op_local.operator.remove_all("/")
     _clean_sqlite()
+
+    print("  --- BACKEND CLEANED! ---")
+
+@pytest.fixture(scope="module")
+def clean_before(backend, baseline_op, tamper_op_local):
+    _clean(backend, baseline_op, tamper_op_local)
     yield
+
+@pytest.fixture(scope="module")
+def clean_after(backend, baseline_op, tamper_op_local):
+    yield
+    _clean(backend, baseline_op, tamper_op_local)
