@@ -1,7 +1,6 @@
 # benchmarks/conftest.py
 import os
 import pytest
-import random
 import opendal
 from securedal import TamperOperator
 
@@ -158,7 +157,7 @@ def _clean_sqlite():
         conn.commit()
         conn.close()
 
-def _clean(backend, baseline_op, tamper_op_local):
+def _clean(backend, baseline_op=None, tamper_op_local=None):
     print("\n  --- CLEANING BACKEND... ---")
 
     if backend["scheme"] == "redis":
@@ -166,9 +165,12 @@ def _clean(backend, baseline_op, tamper_op_local):
     elif backend["scheme"] == "postgresql":
         _clean_postgresql()
     else:
-        baseline_op.remove_all("/")
-        tamper_op_local.operator.remove_all("/")
-    _clean_sqlite()
+        if baseline_op:
+            baseline_op.remove_all("/") 
+        if tamper_op_local:
+            tamper_op_local.operator.remove_all("/")
+    if tamper_op_local:
+        _clean_sqlite()
 
     print("  --- BACKEND CLEANED! ---")
 
@@ -181,3 +183,13 @@ def clean_before(backend, baseline_op, tamper_op_local):
 def clean_after(backend, baseline_op, tamper_op_local):
     yield
     _clean(backend, baseline_op, tamper_op_local)
+
+@pytest.fixture(scope="function")
+def clean_batch_baseline(backend, baseline_op):
+    yield
+    _clean(backend, baseline_op=baseline_op)
+
+@pytest.fixture(scope="function")
+def clean_batch_sdk(backend, tamper_op_local):
+    yield
+    _clean(backend, tamper_op_local=tamper_op_local)
