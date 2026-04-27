@@ -6,7 +6,7 @@ set -e
 BACKENDS=("s3" "redis" "postgresql")
 WORKLOADS=("write" "read" "mixed")
 N_ROUNDS=10000
-N_REPEATS=3
+N_REPEATS=5
 RESULTS_DIR="./evaluation/results"
 HISTOGRAM_DIR="./evaluation"
 
@@ -23,11 +23,15 @@ for backend in "${BACKENDS[@]}"; do
         echo ""
         echo "  --- Run $run/$N_REPEATS ---"
 
+        # Reset backend state BEFORE the run
+        docker compose restart
+        sleep 2
+
         for workload in "${WORKLOADS[@]}"; do
             echo ""
             echo "  --- Workload: $workload ---"
 
-            pytest benchmarks/test_bench_${workload}.py \
+            uv run pytest benchmarks/test_bench_${workload}.py \
                 --benchmark-json="${RESULTS_DIR}/results_${backend}_${workload}_run${run}.json" \
                 --benchmark-histogram="${HISTOGRAM_DIR}/histogram_${backend}_${workload}_run${run}" \
                 --backend="$backend" \
@@ -43,7 +47,7 @@ done
 
 echo ""
 echo "Adding p95/p99 to result files..."
-python benchmarks/extra_stats.py
+uv run python benchmarks/extra_stats.py
 
 echo ""
 echo "================================================"

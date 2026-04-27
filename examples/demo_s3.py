@@ -3,7 +3,7 @@ from securedal import TamperOperator
 # Initialize the operator for the local S3 (Minio)
 op = TamperOperator(
     scheme="s3",
-    bucket="test-bucket",
+    bucket="bench-sdk",
     endpoint="http://localhost:9000",
     access_key_id="minioadmin",
     secret_access_key="minioadmin",

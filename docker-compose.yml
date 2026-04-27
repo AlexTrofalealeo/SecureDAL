@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:7.2
+    container_name: bench-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: bench-postgres
+    environment:
+      POSTGRES_USER: tamper_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: tamper
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: bench-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+
+  # Optional: auto-create buckets
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'Waiting for MinIO...';
+        sleep 1;
+      done;
+      mc mb -p local/bench-baseline || true;
+      mc mb -p local/bench-sdk || true;
+      exit 0;
+      "
+
+volumes:
+  pgdata:
+  minio-data:

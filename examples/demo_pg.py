@@ -4,7 +4,7 @@ from securedal import TamperOperator
 op = TamperOperator(
     "postgresql",
     connection_string="postgresql://tamper_user:password@localhost:5432/tamper",
-    table="opendal_storage"
+    table="sdk_store"
 )
 """
 OpenDAL treats relational DBs as KV stores. So we write/read value to/from a key(PRIMARY KEY), not supporting complex queries.
