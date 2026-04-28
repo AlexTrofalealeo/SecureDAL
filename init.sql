@@ -1,9 +1,4 @@
-CREATE TABLE IF NOT EXISTS baseline_store (
-    key TEXT PRIMARY KEY,
-    value BYTEA NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sdk_store (
+CREATE TABLE IF NOT EXISTS bench_storage (
     key TEXT PRIMARY KEY,
     value BYTEA NOT NULL
 );

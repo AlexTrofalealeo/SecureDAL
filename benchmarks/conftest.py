@@ -1,5 +1,6 @@
 # benchmarks/conftest.py
 import os
+from random import Random
 import pytest
 import opendal
 from securedal import TamperOperator
@@ -24,20 +25,12 @@ N_WARMUP = 10
 BACKENDS = {
     "fs": {
         "scheme": "fs",
-        "baseline": {"root": "./benchmarks/bench_storage/baseline"},
-        "sdk":      {"root": "./benchmarks/bench_storage/sdk"},
+        "kwargs": {"root": "./benchmarks/bench_storage"},
     },
     "s3": {
         "scheme": "s3",
-        "baseline": {
-            "bucket":            "bench-baseline",
-            "endpoint":          "http://localhost:9000",
-            "access_key_id":     "minioadmin",
-            "secret_access_key": "minioadmin",
-            "region":            "us-east-1",
-        },
-        "sdk": {
-            "bucket":            "bench-sdk",
+        "kwargs": {
+            "bucket":            "bench-storage",
             "endpoint":          "http://localhost:9000",
             "access_key_id":     "minioadmin",
             "secret_access_key": "minioadmin",
@@ -46,24 +39,16 @@ BACKENDS = {
     },
     "postgresql": {
         "scheme": "postgresql",
-        "baseline": {
+        "kwargs": {
             "connection_string": "postgresql://tamper_user:password@localhost:5432/tamper",
-            "table":             "baseline_store",
-        },
-        "sdk": {
-            "connection_string": "postgresql://tamper_user:password@localhost:5432/tamper",
-            "table":             "sdk_store",
+            "table":             "bench_storage",
         },
     },
     "redis": {
         "scheme": "redis",
-        "baseline": {
+        "kwargs": {
             "endpoint": "redis://localhost:6379",
             "db":        "0",
-        },
-        "sdk": {
-            "endpoint": "redis://localhost:6379",
-            "db":        "1",
         },
     },
 }
@@ -99,12 +84,32 @@ def n_rounds(request):
     return request.config.getoption("--n-rounds")
 
 
+# -- Config --------------------------------------------------
+
+def pytest_collection_modifyitems(config, items):
+    order = {
+        "test_baseline_write": 0,
+        "test_sdk_write": 1,
+        "test_baseline_read": 2,
+        "test_sdk_read": 3,
+        "test_baseline_mixed": 4,
+        "test_sdk_mixed": 5,
+    }
+
+    def get_key(item):
+        for key in order:
+            if key in item.nodeid:
+                return order[key]
+        return 999  # anything unknown goes last
+
+    items.sort(key=get_key)
+
 # -- Fixtures -----------------------------------------------
 
 @pytest.fixture(scope="module")
 def baseline_op(backend):
     """Plain OpenDAL."""
-    return opendal.Operator(backend["scheme"], **backend["baseline"])
+    return opendal.Operator(backend["scheme"], **backend["kwargs"])
 
 @pytest.fixture(scope="module")
 def tamper_op_local(backend):
@@ -112,7 +117,7 @@ def tamper_op_local(backend):
     return TamperOperator(
         scheme=backend["scheme"],
         mapping_path=MAPPING_PATH,
-        **backend["sdk"]
+        **backend["kwargs"]
     )
 
 
@@ -127,9 +132,10 @@ def key_pool(n_rounds):
 
 @pytest.fixture(scope="module")
 def data_pool():
+    rng = Random(RNG_SEED)
     pool = {}
     for name, size in TEST_CASE:
-        pool[name] = [os.urandom(size) for _ in range(N_FILES)]
+        pool[name] = [rng.randbytes(size) for _ in range(N_FILES)]
     return pool
 
 
@@ -137,15 +143,14 @@ def data_pool():
 
 def _clean_redis():
     import redis
-    r = redis.Redis.from_url(BACKENDS["redis"]["baseline"]["endpoint"])
+    r = redis.Redis.from_url(BACKENDS["redis"]["kwargs"]["endpoint"])
     r.flushall(asynchronous=False)
 
 def _clean_postgresql():
     import psycopg2
-    conn = psycopg2.connect(BACKENDS["postgresql"]["baseline"]["connection_string"])
+    conn = psycopg2.connect(BACKENDS["postgresql"]["kwargs"]["connection_string"])
     cur = conn.cursor()
-    cur.execute(f"TRUNCATE TABLE {BACKENDS['postgresql']['baseline']['table']};")
-    cur.execute(f"TRUNCATE TABLE {BACKENDS['postgresql']['sdk']['table']};")
+    cur.execute(f"TRUNCATE TABLE {BACKENDS['postgresql']['kwargs']['table']};")
     conn.commit()
     conn.close()
 
@@ -158,8 +163,6 @@ def _clean_sqlite():
         conn.close()
 
 def _clean(backend, baseline_op=None, tamper_op_local=None):
-    print("\n  --- CLEANING BACKEND... ---")
-
     if backend["scheme"] == "redis":
         _clean_redis()
     elif backend["scheme"] == "postgresql":
@@ -172,24 +175,30 @@ def _clean(backend, baseline_op=None, tamper_op_local=None):
     if tamper_op_local:
         _clean_sqlite()
 
-    print("  --- BACKEND CLEANED! ---")
-
 @pytest.fixture(scope="module")
 def clean_before(backend, baseline_op, tamper_op_local):
+    print("\n  --- CLEANING BACKEND... ---")
     _clean(backend, baseline_op, tamper_op_local)
+    print("  --- BACKEND CLEANED! ---")
     yield
 
 @pytest.fixture(scope="module")
 def clean_after(backend, baseline_op, tamper_op_local):
     yield
+    print("\n  --- CLEANING BACKEND... ---")
     _clean(backend, baseline_op, tamper_op_local)
+    print("  --- BACKEND CLEANED! ---")
 
 @pytest.fixture(scope="function")
-def clean_batch_baseline(backend, baseline_op):
+def clean_baseline(backend, baseline_op):
     yield
+    print("|-", end="")
     _clean(backend, baseline_op=baseline_op)
+    print("|", end="")
 
 @pytest.fixture(scope="function")
-def clean_batch_sdk(backend, tamper_op_local):
+def clean_sdk(backend, tamper_op_local):
     yield
+    print("|-", end="")
     _clean(backend, tamper_op_local=tamper_op_local)
+    print("|", end="")

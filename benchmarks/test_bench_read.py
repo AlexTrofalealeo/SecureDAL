@@ -15,7 +15,7 @@ import os
 
 def random_read(op, files, rng):
     f = rng.choice(files)
-    return op.read(f)
+    return op.read(f"sdk_{f}")
 
 # -- Baseline benchmarks ------------------------------------
 

@@ -66,8 +66,7 @@ services:
         echo 'Waiting for MinIO...';
         sleep 1;
       done;
-      mc mb -p local/bench-baseline || true;
-      mc mb -p local/bench-sdk || true;
+      mc mb -p local/bench-storage || true;
       exit 0;
       "
 
