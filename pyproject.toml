@@ -17,7 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-benchmark",
+    "pytest-benchmark[histogram]",
     "python-dotenv",
     "numpy",
     "redis",
