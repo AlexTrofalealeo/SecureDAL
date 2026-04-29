@@ -5,9 +5,9 @@ services:
     container_name: bench-ipfs
 
     ports:
-      - "4001:4001"        # swarm
-      - "4001:4001/udp"    # QUIC
-      - "127.0.0.1:5001:5001"  # API (IMPORTANT: localhost only)
+      - "127.0.0.1:4001:4001"        # swarm
+      - "127.0.0.1:4001:4001/udp"    # QUIC
+      - "127.0.0.1:5001:5001"  # API 
       - "127.0.0.1:8080:8080"  # gateway
 
     volumes:
@@ -23,7 +23,7 @@ services:
     image: redis:7.2
     container_name: bench-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     restart: unless-stopped
 
@@ -35,7 +35,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: tamper
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -49,8 +49,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     volumes:
       - minio-data:/data
     restart: unless-stopped

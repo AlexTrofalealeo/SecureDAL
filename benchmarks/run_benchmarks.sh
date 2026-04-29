@@ -3,7 +3,8 @@
 
 set -e
 
-BACKENDS=("s3" "redis" "postgresql")
+BACKENDS=("redis" "postgresql")
+# BACKENDS=("s3" "redis" "postgresql")
 WORKLOADS=("write" "read" "mixed")
 N_ROUNDS=10000
 N_REPEATS=5
