@@ -24,7 +24,18 @@ services:
     container_name: bench-redis
     ports:
       - "127.0.0.1:6379:6379"
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: 
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --timeout
+      - "0"
+      - --tcp-keepalive
+      - "60"
+      - --maxmemory
+      - "0"
     restart: unless-stopped
 
   postgres:
