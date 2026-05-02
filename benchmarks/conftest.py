@@ -16,7 +16,7 @@ TEST_CASE = [
     ("16mb",  16_777_216),
 ]
 
-N_FILES  = 100
+N_FILES  = 1000
 N_ROUNDS = 10000
 N_WARMUP = 10
 
@@ -137,6 +137,24 @@ def data_pool():
     for name, size in TEST_CASE:
         pool[name] = [rng.randbytes(size) for _ in range(N_FILES)]
     return pool
+
+@pytest.fixture(scope="module")
+def dataset(backend, tamper_op_local, key_pool, data_pool):
+    if backend["scheme"] == "redis":
+        _clean_redis()
+
+        keys = {}
+        for s in TEST_CASE:
+            (name, size) = s
+            keys[name] = []
+            for i in range(N_FILES):
+                key = f"read_bench_{name}_{i}.bin"
+                tamper_op_local.write(f"sdk_{key}", data_pool[name][i])
+                keys[name].append(key)
+
+        return keys
+    else:
+        return key_pool
 
 
 # -- Cleaners -----------------------------------------------

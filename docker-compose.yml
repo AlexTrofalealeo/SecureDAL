@@ -30,12 +30,10 @@ services:
       - ""
       - --appendonly
       - "no"
-      - --timeout
-      - "0"
-      - --tcp-keepalive
-      - "60"
-      - --maxmemory
-      - "0"
+      - --maxmemory 
+      - "25gb"
+      - --maxmemory-policy 
+      - "allkeys-lru"
     restart: unless-stopped
 
   postgres:
