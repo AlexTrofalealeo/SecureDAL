@@ -16,7 +16,7 @@ TEST_CASE = [
     ("16mb",  16_777_216),
 ]
 
-N_FILES  = 1000
+N_FILES  = 500
 N_ROUNDS = 10000
 N_WARMUP = 10
 
