@@ -100,7 +100,7 @@ class TamperOperator:
 
         self.operator.write(key, data, **options)
 
-        hash_value = self._compute_hash(key, full_data)
+        hash_value = self._compute_hash(full_data)
         self.ledger.store_hash(key, hash_value)
 
     def read(self, key: str, **options: Any) -> bytes:
@@ -117,7 +117,7 @@ class TamperOperator:
         if expected_hash is None:
             raise MissingAnchorException(key)
         
-        current_hash = self._compute_hash(key, data)
+        current_hash = self._compute_hash(data)
         if expected_hash != current_hash:
             raise TamperDetectedException(key)
 
@@ -133,7 +133,7 @@ class TamperOperator:
         dest = self._normalize_path(dest)
         data = self.read(source)
         self.operator.copy(source, dest)
-        hash_value = self._compute_hash(dest, data)
+        hash_value = self._compute_hash(data)
         self.ledger.store_hash(dest, hash_value)
 
     def rename(self, source: str, dest: str) -> None:
@@ -141,7 +141,7 @@ class TamperOperator:
         dest = self._normalize_path(dest)
         data = self.read(source)
         self.operator.rename(source, dest)
-        hash_value = self._compute_hash(dest, data)
+        hash_value = self._compute_hash(data)
         self.ledger.store_hash(dest, hash_value)
         self.ledger.delete(source)
 
@@ -179,21 +179,9 @@ class TamperOperator:
             "TamperOperator does not support 'open()'. Use read/write instead."
         )
     
-    def _compute_hash(self, key: str, data: bytes) -> bytes:
-        metadata = self.operator.stat(key)
-        meta_parts = []
-        if metadata.content_length is not None:
-            meta_parts.append(f"content_length={metadata.content_length}")
-        if metadata.last_modified is not None:
-            meta_parts.append(f"last_modified={metadata.last_modified.isoformat()}")
-        if metadata.etag is not None:
-            meta_parts.append(f"etag={metadata.etag}")
-        if metadata.version is not None:
-            meta_parts.append(f"version={metadata.version}")
-        meta_str = "&".join(meta_parts)
-
-        payload = (self.operator_context["id"] + key).encode() + data + meta_str.encode()
-        return sha256(payload).digest()
+    @staticmethod
+    def _compute_hash(self, data: bytes) -> bytes:
+        return sha256(data).digest()
 
     def __getattr__(self, name):
         return getattr(self.operator, name)
