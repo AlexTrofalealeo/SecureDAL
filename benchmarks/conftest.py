@@ -33,10 +33,10 @@ BACKENDS = {
         "scheme": "s3",
         "kwargs": {
             "bucket":            "bench-storage",
-            "endpoint":          "https://s3.eu-west-1.wasabisys.com",
-            "access_key_id":     os.getenv('ACCESS_KEY'),
-            "secret_access_key": os.getenv('SECRET_KEY'),
-            "region":            "eu-west-1",
+            "endpoint":          "http://localhost:9000",
+            "access_key_id":     "minioadmin",
+            "secret_access_key": "minioadmin",
+            "region":            "us-east-1",
         },
     },
     "postgresql": {

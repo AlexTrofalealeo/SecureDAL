@@ -180,7 +180,7 @@ class TamperOperator:
         )
     
     @staticmethod
-    def _compute_hash(self, data: bytes) -> bytes:
+    def _compute_hash(data: bytes) -> bytes:
         return sha256(data).digest()
 
     def __getattr__(self, name):
