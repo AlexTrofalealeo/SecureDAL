@@ -9,7 +9,7 @@ op = TamperOperator(
 
 cid="Qmf7rUYeb4tBeW3XkXrjDL6ktpEQmvAFrxgJQxMUGKosx6"
 # Read data from the file
-content = op.operator.read(cid)
+content = op._operator.read(cid)
 print(content)
 
 # Get metadata

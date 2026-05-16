@@ -41,5 +41,5 @@ uv sync --extra dev
 Or with `uv`:
 
 ```bash
-uv run ./run_benchmarks.sh
+uv run ./benchmarks/run_benchmarks.sh
 ```

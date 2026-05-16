@@ -89,7 +89,7 @@ content = op.read_all("/test_readall/")
 print("\n----NORMAL READALL:\n", content)
 
 # Tamper with file (bypass write through openDAL)
-op.operator.write("test_readall/test_readall_10.txt", b"Hello World10! <- TAMPERED")
+op._operator.write("test_readall/test_readall_10.txt", b"Hello World10! <- TAMPERED")
 
 # Read (and verify) all files
 try:

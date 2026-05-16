@@ -1,4 +1,5 @@
-from .eis_layer import EISLayer
+from .eis_layer import EISLayer, IPFSEISLayer
+from .mapping import AnchorMapping
 from .exceptions import BulkTamperException, TamperDetectedException, MissingAnchorException, DataNotFoundException, TamperException
 import opendal
 from typing import Any
@@ -20,26 +21,29 @@ _IDENTITY_KEYS = {
 }
 
 class TamperOperator:
-    operator: opendal.Operator
-    ledger: EISLayer
+    _operator: opendal.Operator
+    _eis: EISLayer
 
     def __init__(
             self, 
             scheme: str, 
-            ledger: str = "/ip4/127.0.0.1/tcp/5001", 
+            eis_address: str = "/ip4/127.0.0.1/tcp/5001", 
             mapping_path: str = "./storage/mapping/tamper_mapping.db", 
             pinata_token: str = None, 
+            eis: EISLayer = None,          # optional custom EIS layer
+            mapping: AnchorMapping = None, # optional custom mapping
             **kwargs: Any
         ) -> None:
 
-        self.operator = opendal.Operator(scheme, **kwargs)
-        self.operator_context = self._build_operator_context(scheme, **kwargs)
+        self._operator = opendal.Operator(scheme, **kwargs)
+        self._operator_context = self._build_operator_context(scheme, **kwargs)
 
-        self.ledger = EISLayer(
-            address=ledger,
+        self._eis = eis or IPFSEISLayer(
+            address=eis_address,
             mapping_path=mapping_path,
             pinata_token=pinata_token,
-            backend_context=self.operator_context,
+            backend_context=self._operator_context,
+            mapping=mapping,
         )
 
     @classmethod
@@ -88,7 +92,7 @@ class TamperOperator:
 
     def write(self, key: str, data: bytes, **options: Any) -> None:
         key = self._normalize_path(key)
-        if options.get("append", False) and self.operator.capability().write_can_append:
+        if options.get("append", False) and self._operator.capability().write_can_append:
             try:
                 existing_data = self.read(key)
             except opendal.exceptions.NotFound:
@@ -98,17 +102,17 @@ class TamperOperator:
         else:
             full_data = data
 
-        self.operator.write(key, data, **options)
+        self._operator.write(key, data, **options)
 
         hash_value = self._compute_hash(full_data)
-        self.ledger.store_hash(key, hash_value)
+        self._eis.store_hash(key, hash_value)
 
     def read(self, key: str, **options: Any) -> bytes:
         key = self._normalize_path(key)
-        expected_hash = self.ledger.get_hash(key)
+        expected_hash = self._eis.get_hash(key)
         
         try:
-            data = self.operator.read(key, **options)
+            data = self._operator.read(key, **options)
         except opendal.exceptions.NotFound:
             if expected_hash is not None:
                 raise DataNotFoundException(key)
@@ -125,40 +129,40 @@ class TamperOperator:
     
     def delete(self, key: str) -> None:
         key = self._normalize_path(key)
-        self.operator.delete(key)
-        self.ledger.delete(key)
+        self._operator.delete(key)
+        self._eis.delete_hash(key)
 
     def copy(self, source: str, dest: str) -> None:
         source = self._normalize_path(source)
         dest = self._normalize_path(dest)
         data = self.read(source)
-        self.operator.copy(source, dest)
+        self._operator.copy(source, dest)
         hash_value = self._compute_hash(data)
-        self.ledger.store_hash(dest, hash_value)
+        self._eis.store_hash(dest, hash_value)
 
     def rename(self, source: str, dest: str) -> None:
         source = self._normalize_path(source)
         dest = self._normalize_path(dest)
         data = self.read(source)
-        self.operator.rename(source, dest)
+        self._operator.rename(source, dest)
         hash_value = self._compute_hash(data)
-        self.ledger.store_hash(dest, hash_value)
-        self.ledger.delete(source)
+        self._eis.store_hash(dest, hash_value)
+        self._eis.delete_hash(source)
 
     def remove_all(self, path: str) -> None:
-        entries = list(self.operator.list(path))
+        entries = list(self._operator.list(path))
         
-        self.operator.remove_all(path)
+        self._operator.remove_all(path)
         
         for entry in entries:
             if entry.metadata.mode.is_file():
-                self.ledger.delete(entry.path)
+                self._eis.delete_hash(entry.path)
 
     def read_all(self, path: str = "/") -> dict[str, bytes]:
         results: dict[str, bytes] = {}
         violations: dict[str, TamperException] = {}
 
-        for entry in self.operator.list(path):
+        for entry in self._operator.list(path):
             if not entry.metadata.mode.is_file():
                 continue
 
@@ -184,10 +188,10 @@ class TamperOperator:
         return sha256(data).digest()
 
     def __getattr__(self, name):
-        return getattr(self.operator, name)
+        return getattr(self._operator, name)
     
     def close(self) -> None:
-        self.ledger.close()
+        self._eis.close()
 
     def __enter__(self):
         return self

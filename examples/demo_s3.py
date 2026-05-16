@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# Initialize the operator for the local S3 (Minio)
+# Initialize the operator for the S3 (Wasabi)
 op = TamperOperator(
     scheme="s3",
     bucket="bench-storage",

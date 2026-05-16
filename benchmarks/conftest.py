@@ -191,7 +191,7 @@ def _clean(backend, baseline_op=None, tamper_op_local=None):
         if baseline_op:
             baseline_op.remove_all("/") 
         if tamper_op_local:
-            tamper_op_local.operator.remove_all("/")
+            tamper_op_local._operator.remove_all("/")
     if tamper_op_local:
         _clean_sqlite()
 

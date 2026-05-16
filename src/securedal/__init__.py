@@ -7,6 +7,8 @@ from .exceptions import (
     DataNotFoundException,
     BulkTamperException,
 )
+from .eis_layer import EISLayer
+from .mapping import AnchorMapping
 
 __all__ = [
     "TamperOperator",
@@ -15,4 +17,6 @@ __all__ = [
     "MissingAnchorException",
     "DataNotFoundException",
     "BulkTamperException",
+    "EISLayer",
+    "AnchorMapping",
 ]
