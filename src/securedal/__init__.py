@@ -4,7 +4,9 @@ from .exceptions import (
     TamperException,
     TamperDetectedException,
     MissingAnchorException,
-    DataNotFoundException,
+    MissingDataException,
+    UntrackedObjectException,
+    OrphanMappingException,
     BulkTamperException,
 )
 from .eis_layer import EISLayer
@@ -15,7 +17,9 @@ __all__ = [
     "TamperException",
     "TamperDetectedException",
     "MissingAnchorException",
-    "DataNotFoundException",
+    "MissingDataException",
+    "UntrackedObjectException",
+    "OrphanMappingException",
     "BulkTamperException",
     "EISLayer",
     "AnchorMapping",

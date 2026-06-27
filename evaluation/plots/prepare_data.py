@@ -13,14 +13,16 @@ import numpy as np
 from collections import defaultdict
 
 here = os.path.dirname(os.path.abspath(__file__))
-pattern = os.path.join(here, "results_*.json")
+results_dir = os.path.join(here, "../final_results")
+plots_dir   = os.path.join(here, "../plots/dat")
+pattern = os.path.join(results_dir, "results_*.json")
 files = sorted(glob.glob(pattern))
 
 if not files:
-    print(f"ERROR: no results_*.json files found in {here}", file=sys.stderr)
+    print(f"ERROR: no results_*.json files found in {results_dir}", file=sys.stderr)
     sys.exit(1)
 
-print(f"Found {len(files)} result files in {here}")
+print(f"Found {len(files)} result files in {results_dir}")
 
 data = defaultdict(list)
 
@@ -30,14 +32,12 @@ for fpath in files:
     tokens = combo.split("_")
     workload = tokens[-1]
     backend = "_".join(tokens[:-1])
-    if backend == "s3":
-        backend = "minio"
 
     with open(fpath) as f:
         d = json.load(f)
 
     for b in d["benchmarks"]:
-        system = "opendal" if "baseline" in b["name"] else "securedal"
+        system = "baseline" if "baseline" in b["name"] else "prototype"
         size = b["params"]["name"]
         mean_ms   = b["stats"]["mean"]   * 1000
         stddev_ms = b["stats"]["stddev"] * 1000
@@ -51,13 +51,13 @@ size_labels = ["4 KB", "64 KB", "1 MB", "16 MB"]
 
 for backend in backends:
     for workload in workloads:
-        fname = os.path.join(here, f"{backend}_{workload}.dat")
+        fname = os.path.join(plots_dir, f"{backend}_{workload}.dat")
         with open(fname, "w") as f:
-            f.write("# x  opendal_lat  opendal_lat_err  securedal_lat  securedal_lat_err"
-                    "  opendal_ops  opendal_ops_err  securedal_ops  securedal_ops_err\n")
+            f.write("# x  baseline_lat  baseline_lat_err  prototype_lat  prototype_lat_err"
+                    "  baseline_ops  baseline_ops_err  prototype_ops  prototype_ops_err\n")
             for i, size in enumerate(sizes):
-                od = data[(backend, workload, "opendal",   size)]
-                sd = data[(backend, workload, "securedal", size)]
+                od = data[(backend, workload, "baseline",   size)]
+                sd = data[(backend, workload, "prototype", size)]
                 if not od or not sd:
                     print(f"  WARNING: missing data for {backend}/{workload}/{size}", file=sys.stderr)
                     continue

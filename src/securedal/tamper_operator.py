@@ -1,6 +1,6 @@
 from .eis_layer import EISLayer, IPFSEISLayer
 from .mapping import AnchorMapping
-from .exceptions import BulkTamperException, TamperDetectedException, MissingAnchorException, DataNotFoundException, TamperException
+from .exceptions import BulkTamperException, TamperDetectedException, MissingAnchorException, MissingDataException, UntrackedObjectException, OrphanMappingException, TamperException
 import opendal
 from typing import Any
 from hashlib import sha256
@@ -26,13 +26,13 @@ class TamperOperator:
 
     def __init__(
             self, 
-            scheme: str, 
+            scheme: str, # OpenDAL
             eis_address: str = "/ip4/127.0.0.1/tcp/5001", 
             mapping_path: str = "./storage/mapping/tamper_mapping.db", 
             pinata_token: str = None, 
             eis: EISLayer = None,          # optional custom EIS layer
             mapping: AnchorMapping = None, # optional custom mapping
-            **kwargs: Any
+            **kwargs: Any # OpenDAL
         ) -> None:
 
         self._operator = opendal.Operator(scheme, **kwargs)
@@ -109,17 +109,22 @@ class TamperOperator:
 
     def read(self, key: str, **options: Any) -> bytes:
         key = self._normalize_path(key)
-        expected_hash = self._eis.get_hash(key)
+        mapping_exists, expected_hash = self._eis.get_hash(key)
         
         try:
             data = self._operator.read(key, **options)
         except opendal.exceptions.NotFound:
-            if expected_hash is not None:
-                raise DataNotFoundException(key)
-            raise
+            if expected_hash is not None:           # No data, anchor exists
+                raise MissingDataException(key)
+            elif mapping_exists:                    # No data, no anchor, mapping exists 
+                raise OrphanMappingException(key)
+            raise                                   # No data, no anchor, no mapping
         
         if expected_hash is None:
-            raise MissingAnchorException(key)
+            if not mapping_exists:                  # data exists, no mapping
+                raise UntrackedObjectException(key)
+            else:
+                raise MissingAnchorException(key)   # data exists, mapping exists, no anchor
         
         current_hash = self._compute_hash(data)
         if expected_hash != current_hash:
@@ -181,6 +186,11 @@ class TamperOperator:
     def open(self, *args, **kwargs):
         raise NotImplementedError(
             "TamperOperator does not support 'open()'. Use read/write instead."
+        )
+    
+    def to_async_operator(self):
+        raise NotImplementedError(
+            "TamperOperator does not support 'to_async_operator()'."
         )
     
     @staticmethod

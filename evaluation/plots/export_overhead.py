@@ -1,12 +1,12 @@
 import os
 import csv
 
-RESULTS_DIR = "."
+RESULTS_DIR = "./dat"
 
 BACKENDS = ["s3_minio", "postgresql", "redis"]
 WORKLOADS = ["read", "write", "mixed"]
 
-OUTPUT_FILE = os.path.join("../plots", "overhead_all.csv")
+OUTPUT_FILE = os.path.join("../plots/plots", "overhead_all.csv")
 
 
 def parse_line(parts):
@@ -19,7 +19,7 @@ def parse_line(parts):
     sd_ops = float(parts[7])
 
     lat_ov = sd_lat / op_lat if op_lat else None
-    ops_ov = sd_ops / op_ops if op_ops else None
+    ops_ov = op_ops / sd_ops if op_ops else None
 
     return size, op_lat, sd_lat, op_ops, sd_ops, lat_ov, ops_ov
 
@@ -32,10 +32,10 @@ def main():
             "backend",
             "workload",
             "size_index",
-            "opendal_latency",
-            "securedal_latency",
-            "opendal_ops",
-            "securedal_ops",
+            "baseline_latency",
+            "prototype_latency",
+            "baseline_ops",
+            "prototype_ops",
             "latency_overhead",
             "throughput_overhead"
         ])

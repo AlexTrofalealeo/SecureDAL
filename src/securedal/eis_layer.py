@@ -70,13 +70,18 @@ class IPFSEISLayer(EISLayer):
 
         return cid
 
-    def get_hash(self, key: str) -> bytes | None:        
+    def get_hash(self, key: str) -> tuple[bool, bytes | None]:        
 
         cid = self._mapping.get(self._full_key(key))
         if cid is None:
-            return None
+            return False, None # Mapping not found
+        
+        try:
+            hash_value = self._client.cat(cid)
+        except ipfshttpclient.exceptions.TimeoutError: # To identify a timeout error as a missing anchor
+            return True, None # Mapping found, anchor not found  
 
-        return self._client.cat(cid)
+        return True, hash_value # Mapping found, anchor may be found
 
     def delete_hash(self, key: str) -> None:
         cid = self._mapping.delete(self._full_key(key))
