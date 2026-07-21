@@ -9,7 +9,7 @@ set linetype 2 lc rgb "#1a9641" lw 2 pt 5 ps 0.9   # PostgreSQL
 set linetype 3 lc rgb "#d6604d" lw 2 pt 9 ps 0.9   # Redis
 
 workloads = "read write mixed"
-wtitles   = "Read-Only Write-Only Mix_Read_Write"
+wtitles   = "Read-Only Write-Only Mix"
 
 set terminal pdfcairo enhanced color font "Times New Roman,10" size 18cm,22cm
 set output scriptdir . "/plots/latency_overhead_vs_baseline_2.pdf"

@@ -4,7 +4,7 @@
 
 set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLT_DIR="$EVAL_DIR/plots"
+PLT_DIR="$DIR/plots"
 GP="gnuplot"
 
 echo ""
