@@ -2,7 +2,7 @@
 
 SecureDAL is an open-source Python-based SDK that extends the [OpenDAL](https://github.com/apache/opendal/tree/main) Python Binding to provide tamper detection for data stored in various backends. It is designed to be a drop-in replacement for OpenDAL, allowing developers to easily integrate tamper detection into their existing applications.
 
-It was motivated by a Master's Dissertation on "Modular Blockchain-Based Data Tampering Detection for Storage Systems" (under review) and originated a further research paper on "SECUREDAL: A practical approach to data tampering detection" (under review).
+It was motivated by a Master's Dissertation on ["Modular Blockchain-Based Data Tampering Detection for Storage Systems"](https://sigarra.up.pt/feup/pt/pub_geral.pub_view?pi_pub_base_id=786338) and originated a further research paper on "SECUREDAL: A practical approach to data tampering detection" (under review).
 
 ![SecureDAL Architecture](./images/securedal_architecture-securedal_prototype.png)
 
