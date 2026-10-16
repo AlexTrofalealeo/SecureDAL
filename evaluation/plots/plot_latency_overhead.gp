@@ -1,15 +1,15 @@
 # Overhead ratio: SecureDAL latency / OpenDAL latency per backend per workload
-# plot_overhead.gp
+# plot_latency_overhead.gp
 # USAGE — from any directory:
 #   bash run_plots.sh
 #   # or manually:
-#   gnuplot -e "scriptdir='/abs/path/to/scripts'" plot_overhead.gp
+#   gnuplot -e "scriptdir='/abs/path/to/scripts'" plot_latency_overhead.gp
 
 set terminal pdfcairo enhanced color font "Times New Roman,10" size 18cm,9cm
-set output scriptdir . "/plots/overhead_ratio.pdf"
+set output scriptdir . "/plots/latency_overhead_ratio.pdf"
 
 set multiplot layout 1,3 \
-    title "{/Times-Bold=12 Prototype Overhead Relative to Baseline (ratio)}" \
+    title "{/Times-Bold=12 Prototype Latency Overhead Relative to Baseline (ratio)}" \
     margins 0.08, 0.97, 0.12, 0.88 spacing 0.10, 0.08
 
 set style data linespoints

@@ -12,39 +12,42 @@ echo "==> Generating plots in: $DIR"
 echo ""
 
 # Combined (3x2 multiplot per backend)
-echo "[1/11] MinIO combined..."
+echo "[1/12] MinIO combined..."
 $GP -e "scriptdir='$DIR'; backend='s3_minio';      btitle='MinIO (S3-Compatible Storage)'" "$DIR/plot_backend.gp"
 
-echo "[2/11] PostgreSQL combined..."
+echo "[2/12] PostgreSQL combined..."
 $GP -e "scriptdir='$DIR'; backend='postgresql'; btitle='PostgreSQL'"                     "$DIR/plot_backend.gp"
 
-echo "[3/11] Redis combined..."
+echo "[3/12] Redis combined..."
 $GP -e "scriptdir='$DIR'; backend='redis';      btitle='Redis'"                          "$DIR/plot_backend.gp"
 
 # Individual PDFs (6 per backend = 18 total)
-echo "[4/11] MinIO individual..."
+echo "[4/12] MinIO individual..."
 $GP -e "scriptdir='$DIR'; backend='s3_minio';      btitle='MinIO (S3-Compatible Storage)'; individual=1" "$DIR/plot_backend.gp"
 
-echo "[5/11] PostgreSQL individual..."
+echo "[5/12] PostgreSQL individual..."
 $GP -e "scriptdir='$DIR'; backend='postgresql'; btitle='PostgreSQL';                     individual=1" "$DIR/plot_backend.gp"
 
-echo "[6/11] Redis individual..."
+echo "[6/12] Redis individual..."
 $GP -e "scriptdir='$DIR'; backend='redis';      btitle='Redis';                          individual=1" "$DIR/plot_backend.gp"
 
 # Overhead ratio summary
-echo "[7/11] Overhead ratio..."
-$GP -e "scriptdir='$DIR'" "$DIR/plot_overhead.gp"
+echo "[7/12] Latency overhead ratio..."
+$GP -e "scriptdir='$DIR'" "$DIR/plot_latency_overhead.gp"
 
-echo "[8/11] Overhead ratio table..."
-python3 export_overhead.py
+echo "[8/12] Throughput retention percentage..."
+$GP -e "scriptdir='$DIR'" "$DIR/plot_throughput_retention.gp"
 
-echo "[9/11] Backend comparison plots..."
+echo "[9/12] Overhead ratio table..."
+python3 $DIR/export_overhead.py
+
+echo "[10/12] Backend comparison plots..."
 $GP -e "scriptdir='$DIR'" "$DIR/plot_comparison.gp"
 
-echo "[10/11] Performance difference plots..."
+echo "[11/12] Performance difference plots..."
 $GP -e "scriptdir='$DIR'" "$DIR/plot_difference.gp"
 
-echo "[11/11] Overhead vs. Baseline plots..."
+echo "[12/12] Overhead vs. Baseline plots..."
 $GP -e "scriptdir='$DIR'" "$DIR/plot_overhead_vs_baseline.gp"
 
 echo ""
